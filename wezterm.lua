@@ -1,5 +1,8 @@
 local wezterm = require("wezterm")
 local act = wezterm.action
+local resurrect = wezterm.plugin.require("https://github.com/MLFlexer/resurrect.wezterm")
+resurrect.periodic_save({ interval_seconds = 60 }) -- Save every 60 seconds
+wezterm.on("gui-startup", resurrect.resurrect_on_gui_startup)
 
 local config = {
 	automatically_reload_config = true,
@@ -95,21 +98,47 @@ config.keys = {
 			args = { "top" },
 		}),
 	},
-	-- { key = "L", mods = "CTRL", action = act.ShowDebugOverlay },
-	-- {
-	-- 	key = "O",
-	-- 	mods = "CTRL|ALT",
-	-- 	-- toggling opacity
-	-- 	action = wezterm.action_callback(function(window, _)
-	-- 		local overrides = window:get_config_overrides() or {}
-	-- 		if overrides.window_background_opacity == 1.0 then
-	-- 			overrides.window_background_opacity = 0.9
-	-- 		else
-	-- 			overrides.window_background_opacity = 1.0
-	-- 		end
-	-- 		window:set_config_overrides(overrides)
-	-- 	end),
-	-- },
+	{
+		key = "E",
+		mods = "CTRL|SHIFT",
+		action = act.PromptInputLine({
+			description = "Enter new name for tab",
+			-- initial_value = "My Tab Name",
+			action = wezterm.action_callback(function(window, pane, line)
+				-- line will be `nil` if they hit escape without entering anything
+				-- An empty string if they just hit enter
+				-- Or the actual line of text they wrote
+				if line then
+					window:active_tab():set_title(line)
+				end
+			end),
+		}),
+	},
+	{
+		key = "w",
+		mods = "ALT",
+		action = wezterm.action_callback(function(win, pane)
+			resurrect.save_state(resurrect.workspace_state.get_workspace_state())
+		end),
+	},
+	{
+		key = "W",
+		mods = "ALT",
+		action = resurrect.window_state.save_window_action(),
+	},
+	{
+		key = "T",
+		mods = "ALT",
+		action = resurrect.tab_state.save_tab_action(),
+	},
+	{
+		key = "s",
+		mods = "ALT",
+		action = wezterm.action_callback(function(win, pane)
+			resurrect.save_state(resurrect.workspace_state.get_workspace_state())
+			resurrect.window_state.save_window_action()
+		end),
+	},
 }
 
 if wezterm.target_triple:find("windows") then
